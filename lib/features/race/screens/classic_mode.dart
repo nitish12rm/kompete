@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 // import 'package:latlong2/latlong.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 
@@ -19,7 +20,7 @@ class ClassicModeScreen extends StatelessWidget {
   TextEditingController endController = TextEditingController();
   late GoogleMapController mapController;
 
-  final LatLng _center =  LatLng(45.521563, -122.677433);
+  final LatLng _center = LatLng(45.521563, -122.677433);
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -27,6 +28,7 @@ class ClassicModeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     return SafeArea(
       child: Scaffold(
         resizeToAvoidBottomInset: false,
@@ -43,12 +45,12 @@ class ClassicModeScreen extends StatelessWidget {
                   children: [
                     /// Selector
                     Obx(
-                          () => Container(
+                      () => Container(
                         child: lobbyController.isCreateClicked.value
                             ? LobbyIdBox(
-                          controller: lobbyController,
-                        )
-                            : LocationSelectorBox(),
+                                controller: lobbyController,
+                              )
+                            : LocationSelectorBox(originController: startController,destinationController: endController,),
                       ),
                     ),
 
@@ -57,28 +59,27 @@ class ClassicModeScreen extends StatelessWidget {
                     Expanded(
                       child: Container(
                         color: Colors.transparent,
-                        child: GoogleMap(
-                          onMapCreated: _onMapCreated,
-                          initialCameraPosition: CameraPosition(
-                            target: _center,
-                            zoom: 11.0,
-                          ),
+                        child: Stack(
+                          children: [
+                            GoogleMap(
+                              onMapCreated: _onMapCreated,
+                              initialCameraPosition: CameraPosition(
+                                target: _center,
+                                zoom: 11.0,
+                              ),
+                            ),
+
+                            ///suggestions
+                            Visibility(
+                              visible: startController.text.isEmpty?true:false,
+                              child: Container(
+                                color: Colors.black,
+                                child: ListView.separated(itemBuilder: (context,index){return ListTile(leading: Icon(Icons.location_on,color: Colors.white,),title: Text("Placess",style: TextStyle(color: Colors.white),),);}, separatorBuilder: (context,index){return Divider();}, itemCount: 4)
+                              ),
+                            ),
+                          ],
                         ),
-                        // child: FlutterMap(
-                        //   options: MapOptions(
-                        //     initialCenter: LatLng(37.7749, -122.4194),
-                        //     // Center the map on a specific location (e.g., San Francisco)
-                        //     initialZoom: 13.0, // Set the initial zoom level
-                        //   ),
-                        //   children: [
-                        //     TileLayer(
-                        //       urlTemplate:
-                        //       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        //       userAgentPackageName: 'com.example.app',
-                        //     )
-                        //   ],
-                        // ),
-                        // This can be your map or other content
+
                       ),
                     ),
                   ],
@@ -87,7 +88,7 @@ class ClassicModeScreen extends StatelessWidget {
 
               /// Create a lobby and join a lobby
               Container(
-                height: 25.h,  // Use a fixed height here to ensure it fits
+                height: 25.h, // Use a fixed height here to ensure it fits
                 child: Obx(() {
                   return lobbyController.isCreateClicked.value
                       ? _buildStartWidget()
@@ -175,7 +176,7 @@ class ClassicModeScreen extends StatelessWidget {
 
         /// Start
         Container(
-          height: 10.h,  // Use a fixed height here
+          height: 10.h, // Use a fixed height here
           color: Colors.black,
           child: Row(
             children: [
@@ -226,7 +227,6 @@ class ClassicModeScreen extends StatelessWidget {
     );
   }
 }
-
 
 class LobbyIdBox extends StatelessWidget {
   const LobbyIdBox({
@@ -307,10 +307,11 @@ class LobbyIdBox extends StatelessWidget {
 }
 
 class LocationSelectorBox extends StatelessWidget {
-  const LocationSelectorBox({
-    super.key,
+    LocationSelectorBox({
+    super.key, required this.originController, required this.destinationController,
   });
-
+final TextEditingController originController;
+final TextEditingController destinationController;
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -328,9 +329,8 @@ class LocationSelectorBox extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               LocationSelectorField(
-
                 icon: Icons.location_searching,
-                title: 'Start',
+                title: 'Start', textEditingController: originController,
               ),
               Row(
                 children: [
@@ -359,7 +359,7 @@ class LocationSelectorBox extends StatelessWidget {
               ),
               LocationSelectorField(
                 icon: Icons.location_on,
-                title: 'End',
+                title: 'End', textEditingController: destinationController,
               ),
             ],
           ),
@@ -368,91 +368,16 @@ class LocationSelectorBox extends StatelessWidget {
     );
   }
 }
-
-// class LocationSelectorField extends StatelessWidget {
-//   const LocationSelectorField({
-//     super.key,
-//     required this.icon,
-//     required this.title,
-//   });
-//
-//   final IconData icon;
-//   final String title;
-//
-//
-//   @override
-//   Widget build(BuildContext context) {
-//
-//     return Row(
-//       children: [
-//         Icon(icon, color: Colors.white),
-//         SizedBox(width: 10),
-//         Expanded(
-//           child: Container(
-//               height: 40, // Set a fixed height for better visibility
-//               child: TypeAheadField(
-//                 builder: (context, controller, focusNode) {
-//
-//                   return TextField(
-//                     controller: controller,
-//               focusNode: focusNode,
-//               decoration: InputDecoration(
-//                 hintText: title.toUpperCase(),
-//                 hintStyle: TextStyle(
-//                     fontSize: 15.sp,
-//                     color: Colors.white,
-//                     fontFamily: "Roboto",
-//                     fontWeight: FontWeight.w500),
-//                 // Change hint text color
-//                 border: InputBorder.none,
-//                 // Remove default border
-//                 filled: true,
-//                 fillColor: Colors.transparent,
-//                 // Background color of the TextField
-//                 contentPadding:
-//                     EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-//               ),
-//               style: TextStyle(color: Colors.white),); // Change text color
-//
-//
-//                 },
-//                 itemBuilder: (context, String suggestion) {
-//                   return Container(
-//                     color: Colors.white,
-//                     child: ListTile(
-//                       leading: Icon(
-//                         Icons.location_on,
-//                         color: Colors.black,
-//                       ),
-//                       title: Text(suggestion,
-//                           style: TextStyle(color: Colors.black)),
-//                     ),
-//                   );
-//                 },
-//                 onSelected: (String suggestion) {
-//                   // Handle location selection
-//
-//                   print('Selected location: $suggestion');
-//
-//                 },
-//                 suggestionsCallback: (pattern) {
-//                   return LocationService.getSuggestions(pattern);
-//                 },
-//               )),
-//         ),
-//       ],
-//     );
-//   }
-// }
 class LocationSelectorField extends StatelessWidget {
   const LocationSelectorField({
     super.key,
     required this.icon,
-    required this.title,
+    required this.title, required this.textEditingController,
   });
 
   final IconData icon;
   final String title;
+  final TextEditingController textEditingController;
 
   @override
   Widget build(BuildContext context) {
@@ -464,6 +389,7 @@ class LocationSelectorField extends StatelessWidget {
           child: Container(
             height: 40, // Set a fixed height for better visibility
             child: TextField(
+              controller: textEditingController,
               decoration: InputDecoration(
                 hintText: title.toUpperCase(),
                 hintStyle: TextStyle(
