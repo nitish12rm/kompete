@@ -207,6 +207,17 @@ class ClassicModeScreen extends StatelessWidget {
   }
 
   Widget _buildPlayerWidget() {
+    return Players();
+  }
+}
+
+class Players extends StatelessWidget {
+  const Players({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -216,12 +227,13 @@ class ClassicModeScreen extends StatelessWidget {
           ),
           child: Icon(
             Icons.person,
-            size: 25.sp,
+            size: 50.sp,
           ),
         ),
+        SizedBox(height: 10,),
         Text(
           'PLAYER',
-          style: TextStyle(fontWeight: FontWeight.w400),
+          style: TextStyle(fontWeight: FontWeight.w500,fontStyle: FontStyle.italic),
         ),
       ],
     );

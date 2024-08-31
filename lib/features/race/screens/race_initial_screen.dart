@@ -8,6 +8,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kompete/features/race/controller/drop_location_controller.dart';
+import 'package:kompete/features/race/screens/lobby/lobby_screen.dart';
 import 'package:kompete/utils/location_permission.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 import '../../../constants/const.dart';
@@ -97,6 +98,7 @@ class _RaceInitialScreenState extends State<RaceInitialScreen> {
         backgroundColor: Colors.black,
         ///APP BAR
         appBar: AppBar(
+          foregroundColor: Colors.white,
           backgroundColor: Colors.black,
           elevation: 0,
           title: Text(
@@ -483,7 +485,6 @@ class _RaceInitialScreenState extends State<RaceInitialScreen> {
               height: 10.h, // Use a fixed height here to ensure it fits
               child: Row(
                 children: [
-
                   Expanded(
                     child: GestureDetector(
                       child: Container(
@@ -512,11 +513,18 @@ class _RaceInitialScreenState extends State<RaceInitialScreen> {
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
-                        showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return LobbyPopup(lobbyId: 'ABC123');
-                            });
+                        if(isReedit){
+                          // showDialog(
+                          //     context: context,
+                          //     builder: (BuildContext context) {
+                          //       return LobbyPopup(lobbyId: 'ABC123');
+                          //     });
+                          Get.to(()=>LobbyScreen());
+                        }
+                        else{
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Set the address first")));
+                        }
+
                       },
                       child: Container(
                         color: Colors.black,
