@@ -54,4 +54,30 @@ class LobbyRepository {
       throw error.toString();
     }
   }
+  
+  
+  ///GETLOBBY
+  Future<LobbyModel> getLobby({required String lobbyId}) async{
+    try{
+      var response = await _api.sendRequest.get('/lobby',data: jsonEncode({"lobbyId":lobbyId}));
+      ApiResponse apiResponse = ApiResponse.fromResponse(response);
+
+      LobbyModel lobbyModel = LobbyModel.fromJson(apiResponse.data);
+
+      return lobbyModel;
+    } on DioException catch (dioError) {
+      String errorMessage = "An unexpected error occurred";
+      if (dioError.response != null) {
+// Extract the API error message from the response
+        ApiResponse apiResponse = ApiResponse.fromResponse(dioError.response!);
+        errorMessage = apiResponse.message ?? errorMessage;
+      } else {
+// Handle cases where the error has no response (e.g., network issues)
+        errorMessage = dioError.message ?? "check your network";
+      }
+      throw errorMessage;
+    } catch (error) {
+      throw error.toString();
+    }
+  }
 }

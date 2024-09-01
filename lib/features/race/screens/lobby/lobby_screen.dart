@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:kompete/data/model/Lobby/lobby_model.dart';
+import 'package:kompete/logic/Lobby/lobby.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:kompete/logic/Lobby/controller/lobby_controller.dart';
 
@@ -16,10 +17,27 @@ import 'package:kompete/logic/Lobby/controller/lobby_controller.dart';
 
 
 
-class LobbyScreen extends StatelessWidget {
+class LobbyScreen extends StatefulWidget {
   LobbyScreen({super.key});
-  final LobbyModelController lobbyModelController = Get.put(LobbyModelController());
 
+  @override
+  State<LobbyScreen> createState() => _LobbyScreenState();
+}
+
+class _LobbyScreenState extends State<LobbyScreen> {
+  final LobbyModelController lobbyModelController = Get.put(LobbyModelController());
+  final LobbyOperationController lobbyOperationController = Get.put(LobbyOperationController());
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    lobbyOperationController.startPolling(lobbyId: lobbyModelController.lobbyModel.value.lobbyId);
+  }
+  @override
+  void dispose() {
+    lobbyOperationController.stopPolling();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,17 +138,19 @@ class LobbyScreen extends StatelessWidget {
               padding: const EdgeInsets.all(10.0),
               child: Container(
                 color: Colors.white,
-                child: GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, // Number of columns
-                    crossAxisSpacing: 4.0, // Spacing between columns
-                    mainAxisSpacing: 4.0, // Spacing between rows
-                    childAspectRatio: 1.0, // Aspect ratio of each grid item
+                child: Obx(
+                  ()=> GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, // Number of columns
+                      crossAxisSpacing: 4.0, // Spacing between columns
+                      mainAxisSpacing: 4.0, // Spacing between rows
+                      childAspectRatio: 1.0, // Aspect ratio of each grid item
+                    ),
+                    itemCount: lobbyModelController.lobbyModel.value.users?.length ?? 0, // Total number of items
+                    itemBuilder: (context, index) {
+                      return Players(playerName: "Player $index");
+                    },
                   ),
-                  itemCount: lobbyModelController.lobbyModel.value.users?.length ?? 0, // Total number of items
-                  itemBuilder: (context, index) {
-                    return Players(playerName: "Player $index");
-                  },
                 ),
               ),
             ),
@@ -184,7 +204,7 @@ class Players extends StatelessWidget {
           ),
           child: Icon(
             Icons.person,
-            size: 50.sp,
+            size: 45.sp,
           ),
         ),
         SizedBox(height: 10),
