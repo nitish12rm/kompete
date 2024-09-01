@@ -1,69 +1,145 @@
+import 'dart:convert';
+
 class LobbyModel {
   String? createdBy;
   int? maxUsers;
+  List<Coordinate>? coordinates;
+  String? distance;
   String? status;
-  String? sId;
+  String? id;
   String? lobbyId;
-  List<Users>? users;
-  int? iV;
+  List<User>? users;
+  DateTime? createdAt;
+  DateTime? updatedAt;
+  int? v;
 
-  LobbyModel(
-      {this.createdBy,
-        this.maxUsers,
-        this.status,
-        this.sId,
-        this.lobbyId,
-        this.users,
-        this.iV});
+  LobbyModel({
+    this.createdBy,
+    this.maxUsers,
+    this.coordinates,
+    this.distance,
+    this.status,
+    this.id,
+    this.lobbyId,
+    this.users,
+    this.createdAt,
+    this.updatedAt,
+    this.v,
+  });
 
-  LobbyModel.fromJson(Map<String, dynamic> json) {
-    createdBy = json['createdBy'];
-    maxUsers = json['maxUsers'];
-    status = json['status'];
-    sId = json['_id'];
-    lobbyId = json['lobbyId'];
-    if (json['users'] != null) {
-      users = <Users>[];
-      json['users'].forEach((v) {
-        users!.add(new Users.fromJson(v));
-      });
-    }
-    iV = json['__v'];
-  }
+  factory LobbyModel.fromRawJson(String str) => LobbyModel.fromJson(json.decode(str));
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['createdBy'] = this.createdBy;
-    data['maxUsers'] = this.maxUsers;
-    data['status'] = this.status;
-    data['_id'] = this.sId;
-    data['lobbyId'] = this.lobbyId;
-    if (this.users != null) {
-      data['users'] = this.users!.map((v) => v.toJson()).toList();
-    }
-    data['__v'] = this.iV;
-    return data;
-  }
+  String toRawJson() => json.encode(toJson());
+
+  factory LobbyModel.fromJson(Map<String, dynamic> json) => LobbyModel(
+    createdBy: json["createdBy"],
+    maxUsers: json["maxUsers"],
+    coordinates: json["coordinates"] == null ? [] : List<Coordinate>.from(json["coordinates"]!.map((x) => Coordinate.fromJson(x))),
+    distance: json["distance"],
+    status: json["status"],
+    id: json["_id"],
+    lobbyId: json["lobbyId"],
+    users: json["users"] == null ? [] : List<User>.from(json["users"]!.map((x) => User.fromJson(x))),
+    createdAt: json["createdAt"] == null ? null : DateTime.parse(json["createdAt"]),
+    updatedAt: json["updatedAt"] == null ? null : DateTime.parse(json["updatedAt"]),
+    v: json["__v"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "createdBy": createdBy,
+    "maxUsers": maxUsers,
+    "coordinates": coordinates == null ? [] : List<dynamic>.from(coordinates!.map((x) => x.toJson())),
+    "distance": distance,
+    "status": status,
+    "_id": id,
+    "lobbyId": lobbyId,
+    "users": users == null ? [] : List<dynamic>.from(users!.map((x) => x.toJson())),
+    "createdAt": createdAt?.toIso8601String(),
+    "updatedAt": updatedAt?.toIso8601String(),
+    "__v": v,
+  };
 }
 
-class Users {
+class Coordinate {
+  List<Marker>? markers;
+  List<List<double>>? polyline;
+  String? id;
+
+  Coordinate({
+    this.markers,
+    this.polyline,
+    this.id,
+  });
+
+  factory Coordinate.fromRawJson(String str) => Coordinate.fromJson(json.decode(str));
+
+  String toRawJson() => json.encode(toJson());
+
+  factory Coordinate.fromJson(Map<String, dynamic> json) => Coordinate(
+    markers: json["markers"] == null ? [] : List<Marker>.from(json["markers"]!.map((x) => Marker.fromJson(x))),
+    polyline: json["polyline"] == null ? [] : List<List<double>>.from(json["polyline"]!.map((x) => List<double>.from(x.map((x) => x?.toDouble())))),
+    id: json["_id"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "markers": markers == null ? [] : List<dynamic>.from(markers!.map((x) => x.toJson())),
+    "polyline": polyline == null ? [] : List<dynamic>.from(polyline!.map((x) => List<dynamic>.from(x.map((x) => x)))),
+    "_id": id,
+  };
+}
+
+class Marker {
+  List<double>? origin;
+  List<double>? destination;
+  String? id;
+
+  Marker({
+    this.origin,
+    this.destination,
+    this.id,
+  });
+
+  factory Marker.fromRawJson(String str) => Marker.fromJson(json.decode(str));
+
+  String toRawJson() => json.encode(toJson());
+
+  factory Marker.fromJson(Map<String, dynamic> json) => Marker(
+    origin: json["origin"] == null ? [] : List<double>.from(json["origin"]!.map((x) => x?.toDouble())),
+    destination: json["destination"] == null ? [] : List<double>.from(json["destination"]!.map((x) => x?.toDouble())),
+    id: json["_id"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "origin": origin == null ? [] : List<dynamic>.from(origin!.map((x) => x)),
+    "destination": destination == null ? [] : List<dynamic>.from(destination!.map((x) => x)),
+    "_id": id,
+  };
+}
+
+class User {
   String? userId;
   String? role;
-  String? sId;
+  String? id;
 
-  Users({this.userId, this.role, this.sId});
+  User({
+    this.userId,
+    this.role,
+    this.id,
+  });
 
-  Users.fromJson(Map<String, dynamic> json) {
-    userId = json['userId'];
-    role = json['role'];
-    sId = json['_id'];
-  }
+  factory User.fromRawJson(String str) => User.fromJson(json.decode(str));
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['userId'] = this.userId;
-    data['role'] = this.role;
-    data['_id'] = this.sId;
-    return data;
-  }
+  String toRawJson() => json.encode(toJson());
+
+  factory User.fromJson(Map<String, dynamic> json) => User(
+    userId: json["userId"],
+    role: json["role"],
+    id: json["_id"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "userId": userId,
+    "role": role,
+    "_id": id,
+  };
 }

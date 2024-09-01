@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -9,12 +10,14 @@ import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kompete/features/race/controller/drop_location_controller.dart';
 import 'package:kompete/features/race/screens/lobby/lobby_screen.dart';
+import 'package:kompete/logic/authentication/user.dart';
 import 'package:kompete/utils/location_permission.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 import '../../../constants/const.dart';
 import '../../../data/model/place_from_coord.dart';
 import '../../../data/model/places_autocomplete.dart';
 import '../../../data/repository/api_services.dart';
+import '../../../logic/Lobby/lobby.dart';
 import '../controller/lobby_controller.dart';
 import 'classic_mode.dart';
 import 'dropLocationScreen.dart';
@@ -27,8 +30,10 @@ class RaceInitialScreen extends StatefulWidget {
 }
 
 class _RaceInitialScreenState extends State<RaceInitialScreen> {
+  final LobbyOperationController lobbyOperationController = Get.put(LobbyOperationController());
   late GoogleMapController mapController;
   late GoogleMapController dropMapController;
+  List<List<double>> polylineData=[];
 
   final LatLng _center = LatLng(45.521563, -122.677433);
   late GoogleMapController googleMapController;
@@ -334,6 +339,10 @@ class _RaceInitialScreenState extends State<RaceInitialScreen> {
                         position: LatLng(dropLocationController.endLat.value,dropLocationController.endLong.value),
                         icon: BitmapDescriptor.defaultMarkerWithHue(90)));
                     getPolyline();
+                    log("hello");
+                    print("hello");
+                    log(polylineCoordinates.toString());
+                    print(polylineCoordinates.toString());
                     isReedit = true;
                     setState(() {});
                   }
@@ -512,13 +521,15 @@ class _RaceInitialScreenState extends State<RaceInitialScreen> {
                   ),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () {
-                        if(isReedit){
+                      onTap: () async{
+                        if(isReedit) {
                           // showDialog(
                           //     context: context,
                           //     builder: (BuildContext context) {
                           //       return LobbyPopup(lobbyId: 'ABC123');
                           //     });
+
+                        await  lobbyOperationController.createLobby(originLat: originlatlng?.latitude??0.0, originLng: originlatlng?.longitude??0.0, destinationLat: dropLocationController.endLat.value, destinationLng: dropLocationController.endLong.value, polyline: polylineData, distance: distance);
                           Get.to(()=>LobbyScreen());
                         }
                         else{
@@ -574,7 +585,10 @@ class _RaceInitialScreenState extends State<RaceInitialScreen> {
         });
 
         distance = result.distanceTexts!.first.toString();
+        // Convert List<LatLng> to List<List<double>>
+        polylineData = polylineCoordinates.map((latLng) => [latLng.latitude, latLng.longitude]).toList();
 
+        log(polylineData.toString());
         polylines.add(Polyline(
             polylineId: PolylineId("polyline"),
             color: Colors.blue,
@@ -631,3 +645,29 @@ class _RaceInitialScreenState extends State<RaceInitialScreen> {
   //   setState(() {});
   // }
 }
+
+///to parse polylineData list to polylines(latlng)
+/*
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+// Function to parse polyline data from backend
+List<LatLng> parsePolylineData(List<dynamic> polylineData) {
+  return polylineData.map((coord) => LatLng(coord[0], coord[1])).toList();
+}
+
+// Example usage
+void receivePolylineData() async {
+  try {
+    var response = await Dio().get('https://your-backend-url.com/lobbies/lobbyId');
+    List<dynamic> polylineData = response.data['polyline'];
+
+    // Convert to List<LatLng>
+    List<LatLng> polyline = parsePolylineData(polylineData);
+
+    // Now you can use `polyline` in your Google Maps widget
+  } catch (e) {
+    print('Error: $e');
+  }
+}
+
+ */
