@@ -38,6 +38,28 @@ class LobbyOperationController extends GetxController{
   }
 
 
+  ///JOIN LOBBY
+  Future<void> joinLobby({required lobbyId}) async{
+    try{
+      LobbyModel lobbyModel = await lobbyRepository.joinLobby(lobbyId: lobbyId, userId: userController.userModel.value.sId);
+      lobbyModelController.setLobbyModel(lobbyModel);
+    }catch(e){
+      throw e.toString();
+    }
+  }
+
+  ///REMOVE USER FROM LOBBY
+  Future<void> removeFromLobby({required lobbyId}) async{
+    try{
+      LobbyModel lobbyModel = await lobbyRepository.removeFromLobby(lobbyId: lobbyId, userId: userController.userModel.value.sId);
+      lobbyModelController.setLobbyModel(lobbyModel);
+    }catch(e){
+      throw e.toString();
+    }
+  }
+
+
+
 
   void startPolling({required lobbyId}) {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) async {

@@ -1,21 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:get/get.dart';
-import 'package:kompete/data/model/Lobby/lobby_model.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kompete/logic/Lobby/lobby.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:kompete/logic/Lobby/controller/lobby_controller.dart';
 
-
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:get/get.dart';
-import 'package:responsive_sizer/responsive_sizer.dart';
-import 'package:kompete/logic/Lobby/controller/lobby_controller.dart';
-
-
-
-
+import '../../../../constants/const.dart';
 
 class LobbyScreen extends StatefulWidget {
   LobbyScreen({super.key});
@@ -25,19 +17,64 @@ class LobbyScreen extends StatefulWidget {
 }
 
 class _LobbyScreenState extends State<LobbyScreen> {
-  final LobbyModelController lobbyModelController = Get.put(LobbyModelController());
-  final LobbyOperationController lobbyOperationController = Get.put(LobbyOperationController());
+  bool isLoadedinit = false;
+  bool isLoading = false;
+
+  late GoogleMapController googleMapController;
+  final LobbyModelController lobbyModelController =
+  Get.put(LobbyModelController());
+  final LobbyOperationController lobbyOperationController =
+  Get.put(LobbyOperationController());
+  PolylinePoints polylinePoints = PolylinePoints();
+  List<LatLng> polylineCoordinates = [];
+
+
+  Set<Marker> markers = {};
+  Set<Polyline> polylines = {};
+
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    lobbyOperationController.startPolling(lobbyId: lobbyModelController.lobbyModel.value.lobbyId);
+
+    isLoadedinit=true;
+    markers.add(Marker(
+        markerId: MarkerId("start"),
+        position: LatLng(
+            lobbyModelController.lobbyModel.value
+                .coordinates?[0].markers?[0].origin?[0] ??
+                0.0,
+            lobbyModelController.lobbyModel.value
+                .coordinates?[0].markers?[0].origin?[1] ??
+                0.0),
+        icon: BitmapDescriptor.defaultMarker));
+    markers.add(Marker(
+        markerId: MarkerId("end"),
+        position: LatLng(
+            lobbyModelController.lobbyModel.value
+                .coordinates?[0].markers?[0].destination?[0] ??
+                0.0,
+            lobbyModelController.lobbyModel.value
+                .coordinates?[0].markers?[0].destination?[1] ??
+                0.0),
+        icon: BitmapDescriptor.defaultMarkerWithHue(90)));
+    polylineCoordinates=parsePolylineData(lobbyModelController.lobbyModel.value.coordinates![0].polyline!);
+    getPolyline();
+    isLoadedinit=false;
+
+    lobbyOperationController.startPolling(
+        lobbyId: lobbyModelController.lobbyModel.value.lobbyId);
   }
+
   @override
   void dispose() {
     lobbyOperationController.stopPolling();
+    lobbyOperationController.removeFromLobby(
+        lobbyId: lobbyModelController.lobbyModel.value.lobbyId);
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,6 +93,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
       body: Column(
         children: [
+
+          ///lobby id and distance
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Container(
@@ -76,7 +115,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                         Spacer(),
                         Text(
-                          lobbyModelController.lobbyModel.value.lobbyId ?? "error",
+                          lobbyModelController.lobbyModel.value.lobbyId ??
+                              "error",
                           style: TextStyle(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.bold,
@@ -86,11 +126,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         SizedBox(width: 10),
                         IconButton(
                           onPressed: () {
-                            Clipboard.setData(ClipboardData(text: lobbyModelController.lobbyModel.value.lobbyId??"error"));
+                            Clipboard.setData(ClipboardData(
+                                text: lobbyModelController
+                                    .lobbyModel.value.lobbyId ??
+                                    "error"));
                             final snackBar = SnackBar(
                               content: Text('Lobby ID copied to clipboard!'),
                             );
-                            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(snackBar);
                           },
                           icon: Icon(
                             Icons.copy_sharp,
@@ -114,7 +158,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                         Spacer(),
                         Text(
-                          lobbyModelController.lobbyModel.value.distance ?? "error",
+                          lobbyModelController.lobbyModel.value.distance ??
+                              "error",
                           style: TextStyle(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.bold,
@@ -133,28 +178,83 @@ class _LobbyScreenState extends State<LobbyScreen> {
           SizedBox(height: 10),
 
           // Players
-          Expanded(
+          Container(
+            height: 21.h,
             child: Padding(
               padding: const EdgeInsets.all(10.0),
               child: Container(
                 color: Colors.white,
-                child: Obx(
-                  ()=> GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2, // Number of columns
-                      crossAxisSpacing: 4.0, // Spacing between columns
-                      mainAxisSpacing: 4.0, // Spacing between rows
-                      childAspectRatio: 1.0, // Aspect ratio of each grid item
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 10,),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Text("KOMPETERS",style: TextStyle(fontSize: 17.sp,fontWeight: FontWeight.bold,fontStyle: FontStyle.italic),),
                     ),
-                    itemCount: lobbyModelController.lobbyModel.value.users?.length ?? 0, // Total number of items
-                    itemBuilder: (context, index) {
-                      return Players(playerName: "Player $index");
-                    },
-                  ),
+                    Expanded(
+                      child: Obx(
+                            () =>
+                            ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount:
+                              lobbyModelController.lobbyModel.value.users?.length ??
+                                  0,
+                              // Total number of items
+                              itemBuilder: (context, index) {
+                                return Players(playerName: "Player $index");
+                              },
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
+
+          ///maps
+          Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Stack(
+                  children: [
+                    Container(
+                      color: Colors.white,
+                      child: isLoadedinit
+                          ? Container()
+                          : GoogleMap(
+                        mapType: MapType.normal,
+                        initialCameraPosition: CameraPosition(
+                            target: LatLng(
+                                lobbyModelController.lobbyModel.value
+                                    .coordinates?[0].markers?[0].origin?[0] ??
+                                    0.0,
+                                lobbyModelController.lobbyModel.value
+                                    .coordinates?[0].markers?[0].origin?[1] ??
+                                    0.0),
+                            zoom: 12),
+                        myLocationEnabled: true,
+                        tiltGesturesEnabled: true,
+                        compassEnabled: true,
+                        scrollGesturesEnabled: true,
+                        zoomGesturesEnabled: true,
+                        onMapCreated: (controller) {
+                          googleMapController = controller;
+                        },
+                        markers: markers,
+                        polylines: polylines,
+                      ),
+                    ),
+                    isLoading
+                        ? Center(
+                      child: CircularProgressIndicator(),
+                    )
+                        : Container(),
+                  ],
+                ),
+              )),
+
           SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -183,6 +283,51 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
     );
   }
+
+  getPolyline() async {
+    isLoading = true;
+    setState(() {});
+
+    try {
+
+
+      if (polylineCoordinates.isNotEmpty) {
+
+        polylines.add(Polyline(
+            polylineId: PolylineId("polyline"),
+            color: Colors.blue,
+            width: 7,
+            points: polylineCoordinates));
+
+        googleMapController
+            .animateCamera(CameraUpdate.newLatLngZoom(LatLng(lobbyModelController.lobbyModel.value.coordinates?[0].markers?[0]
+            .origin?[0] ?? 0.0, lobbyModelController.lobbyModel.value.coordinates?[0].markers?[0]
+            .origin?[1] ?? 0.0,), 10));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Route not found. Please try again.')),
+        );
+      }
+    } catch (e) {
+      // If there's an error in fetching the route, show an error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+                'Failed to fetch route. Please check your connection or end location and try again.')),
+      );
+    } finally {
+      isLoading = false;
+      setState(() {});
+    }
+  }
+
+//to parse polylineData list to polylines(latlng)
+
+// Function to parse polyline data from backend
+  List<LatLng> parsePolylineData(List<dynamic> polylineData) {
+    return polylineData.map((coord) => LatLng(coord[0], coord[1])).toList();
+  }
 }
 
 class Players extends StatelessWidget {
@@ -195,27 +340,33 @@ class Players extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.black, width: 2),
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black, width: 2),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(25.0),
+              child: Icon(
+                Icons.person,
+                size: 20.sp,
+              ),
+            ),
           ),
-          child: Icon(
-            Icons.person,
-            size: 45.sp,
+          SizedBox(height: 10),
+          Text(
+            playerName,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontStyle: FontStyle.italic,
+            ),
           ),
-        ),
-        SizedBox(height: 10),
-        Text(
-          playerName,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
