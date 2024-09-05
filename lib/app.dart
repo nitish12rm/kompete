@@ -5,6 +5,7 @@ import 'package:kompete/features/Authentication/screens/signup/sign_up.dart';
 import 'package:kompete/features/Splash/splash_screen.dart';
 import 'package:kompete/features/home/home.dart';
 import 'package:kompete/features/race/screens/race_initial_screen.dart';
+import 'package:kompete/navigation_screen.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 
 import 'features/Authentication/screens/signin/sign_in.dart';
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           fontFamily: "Roboto"
         ),
-        home: RaceZoneScreen()
+        home: NavigationScreen()
       );
     });
   }
