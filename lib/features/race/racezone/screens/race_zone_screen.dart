@@ -18,6 +18,7 @@ import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../../../constants/const.dart';
 import '../widgets/widgets_race_zone.dart';
 
 class RaceZoneScreen extends StatefulWidget {
@@ -25,13 +26,20 @@ class RaceZoneScreen extends StatefulWidget {
 
   @override
   State<RaceZoneScreen> createState() => _RaceZoneScreenState();
+
 }
+
+
 class _RaceZoneScreenState extends State<RaceZoneScreen> {
   // Player-specific state variables
   Map<String, dynamic> player1Stats = {};
   Map<String, dynamic> player2Stats = {};
   Map<String, dynamic> player3Stats = {};
   Map<String, dynamic> player4Stats = {};
+  final double destinationThreshold = 5.0; // Threshold in meters to determine if a player has reached the destination
+  List<String> finishedPlayers = []; // Track players who have finished
+  Map<String, int> playerRanks = {}; // Store player ranks
+  int currentRank = 1; // Current rank to assign to the next player who finishes
 
   UserController userController = Get.put(UserController());
   final WebSocketChannel channel =
@@ -51,15 +59,20 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
 
   LatLng? originLatlng2;
 
-  LatLng? destinationLatlng;
+  LatLng destinationLatlng = LatLng(28.573225858000086, 77.34857769872204);
 
   CameraPosition? initialPosition;
 
   Set<Marker> markers = {};
+  Set<String> rank ={};
 
   Set<Polyline> polylines = {};
-
+  double _totalDistance = 0.0; // Total distance covered in meters
+  Position? _previousPosition;
   String distance = "";
+  String duration = "";
+  String speed = "";
+  String calories = "";
 
   bool isLoading = true;
 
@@ -68,7 +81,8 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
   PolylinePoints polylinePoints = PolylinePoints();
 
   TextEditingController endController = TextEditingController();
-
+  Stream<Position>? _positionStream;
+  StreamSubscription<Position>? _positionSubscription;
   List<String> playa = ["66d43937c1266cdb7d1fdb55", "66d2e811efee23c428ba902f", "dfsfs", "fsdfds"];
   dynamic inc;
 
@@ -82,6 +96,7 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
     await for (final msg in streamWithoutErrors) {
       inc = jsonDecode(msg[2].toString());
       if (inc is! int || inc == null) {
+         rank = (inc["rank"] as List<dynamic>).toSet().cast<String>();
         determineMarkers();
         _updatePlayerStats();
 
@@ -139,6 +154,7 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
       });
     }
   }
+
   void _startMessageTimer() {
     _messageTimer = Timer.periodic(_timerInterval, (timer) {
       if (originLatlng != null) {
@@ -146,13 +162,13 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
           userController.userModel.value.sId: {
             'name': userController.userModel.value.name,
             'coord': [originLatlng!.latitude, originLatlng!.longitude],
-            'eta': '8',
-            'distance': '9',
-            'speed': '10',
-            'calories': '120',
+            'eta': '',
+            'distance': "${(_totalDistance / 1000).toStringAsFixed(2)}",
+            'speed': speed,
           },
           'userid': userController.userModel.value.sId,
           'lobbyid': 'abcde',
+          "rank":rank.toList()
         });
 
         channel.sink.add(message);
@@ -160,6 +176,18 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
     });
   }
 
+  bool _isPlayerInCircle(LatLng playerPosition, LatLng destination, double radiusInMeters) {
+    // Convert the radius from meters to degrees (rough conversion)
+    const double meterToLatLng = 1 / 111320.0;  // Approximation: 1 degree latitude ≈ 111.32 km
+    double radiusInDegrees = radiusInMeters * meterToLatLng;
+
+    // Calculate the difference in latitudes and longitudes
+    double deltaLat = playerPosition.latitude - destination.latitude;
+    double deltaLon = playerPosition.longitude - destination.longitude;
+
+    // Check if the point is inside the circle using the circle formula
+    return (deltaLat * deltaLat + deltaLon * deltaLon) <= (radiusInDegrees * radiusInDegrees);
+  }
   @override
   void initState() {
     determineLivePosition();
@@ -170,6 +198,7 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
 
   @override
   Widget build(BuildContext context) {
+
     return inc == null|| inc is int ?Center(child: CircularProgressIndicator(),): Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: Colors.white,
@@ -193,19 +222,24 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
                 ? Center(
               child: CircularProgressIndicator(),
             )
-                : GoogleMap(
-              mapType: MapType.normal,
-              initialCameraPosition: initialPosition!,
-              myLocationEnabled: true,
-              tiltGesturesEnabled: true,
-              compassEnabled: true,
-              scrollGesturesEnabled: true,
-              zoomGesturesEnabled: true,
-              markers: markers,
-              onMapCreated: (controller) {
-                googleMapController = controller;
-              },
-            ),
+                : Stack(
+                  children: [
+                    GoogleMap(
+                                  mapType: MapType.normal,
+                                  initialCameraPosition: initialPosition!,
+                                  myLocationEnabled: true,
+                                  tiltGesturesEnabled: true,
+                                  compassEnabled: true,
+                                  scrollGesturesEnabled: true,
+                                  zoomGesturesEnabled: true,
+                                  markers: markers,
+                                  onMapCreated: (controller) {
+                    googleMapController = controller;
+                                  },
+                                ),
+                    Container(child: Text(inc["rank"].toString()),)
+                  ],
+                ),
           ),
 
           // Player Stats Section
@@ -232,14 +266,16 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
                     // Player Stats Columns
                     PlayerStatsColumn(
                       playerName: player1Stats['name'] ?? 'Player 1',
-                      eta: player1Stats['coord'][0].toString() ?? '',
+                      eta: player1Stats['eta'] ?? '',
+                      // eta: player1Stats['coord'][0].toString() ?? '',
                       distance: player1Stats['distance'] ?? '',
                       speed: player1Stats['speed'] ?? '',
                       calories: player1Stats['calories'] ?? '',
                     ),
                     PlayerStatsColumn(
                       playerName: player2Stats['name'] ?? 'Player 2',
-                      eta: player2Stats['coord'][0].toString() ?? '',
+                      // eta: player2Stats['coord'][0].toString() ?? '',
+                      eta: player2Stats['eta'] ?? '',
                       distance: player2Stats['distance'] ?? '',
                       speed: player2Stats['speed'] ?? '',
                       calories: player2Stats['calories'] ?? '',
@@ -335,43 +371,119 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
     //   setState(() {});
     // });
 
-    _geoLocatorPlatform
+    _positionSubscription =_geoLocatorPlatform
         .getPositionStream(locationSettings: locationSettings)
         .listen((Position? position) async {
       if (position != null) {
+        if (position.speed > 0.5) {
+          speed = "${(position.speed * 3.6).toStringAsFixed(2)}"; // Convert m/s to km/h
+        } else {
+          speed = "0.0"; // Display as idle if speed is below the threshold
+        }
+
         originLatlng = LatLng(position.latitude, position.longitude);
+
         // originLatlng2 = LatLng(position.latitude + 0.004, position.longitude);
+        // Calculate distance covered
+        if (_previousPosition != null) {
+          double distance = Geolocator.distanceBetween(
+            _previousPosition!.latitude,
+            _previousPosition!.longitude,
+            position.latitude,
+            position.longitude,
+          );
+          _totalDistance += distance; // Update total distance
+          if(_totalDistance>220){
+            print("won");
+            rank.add(userController.userModel.value.sId.toString());
+            speed="0.0";
+           _positionSubscription?.cancel();
+            setState(() {
+
+            });
+
+          }
+
+
+        }  _previousPosition = position;
+
+       log(_isPlayerInCircle(originLatlng!, destinationLatlng, 10).toString()) ;
+        double distanceToDestination = Geolocator.distanceBetween(originLatlng!.latitude, originLatlng!.longitude, destinationLatlng.latitude, destinationLatlng.longitude);
+        log(distanceToDestination.toString());
+        if(distanceToDestination<=10){
+          log("won");
+        }
 
         initialPosition = CameraPosition(target: originLatlng!, zoom: 12);
-        var message = jsonEncode({
-          userController.userModel.value.sId : {
-            'name': userController.userModel.value.name,
-            'coord': [originLatlng!.latitude, originLatlng!.longitude],
-            'eta': '8',
-            'distance': '9',
-            'speed': '10',
-            'calories': '120',
-          },
-          'userid': userController.userModel.value.sId,
-          'lobbyid': 'abcde',
-        });
+        // var message = jsonEncode({
+        //   userController.userModel.value.sId : {
+        //     'name': userController.userModel.value.name,
+        //     'coord': [originLatlng!.latitude, originLatlng!.longitude],
+        //     'eta': '8',
+        //     'distance': '9',
+        //     'speed': '10',
+        //     'calories': '120',
+        //   },
+        //   'userid': userController.userModel.value.sId,
+        //   'lobbyid': 'abcde',
+        // });
         log(originLatlng!.longitude.toString());
-        // markers.add(
         //   Marker(
         //     markerId: MarkerId('origin'),
         //     position: inc[playa[0]]["coord"][0],
         //     icon: BitmapDescriptor.defaultMarker,
         //   ),
-        // );
         // markers.removeWhere((element) => element.mapsId.value == 'origin');
 
         // channel.sink.add(message);
         // markers.removeWhere((element) => element.mapsId.value == 'destination');
 
+        // if (destinationLatlng != null) {
+        //   // getPolyline();
+        // }
+
+
         setState(() {});
       }
     });
+
   }
+        // markers.add(
+        // );
+
+// getPolyline() async{
+  //   polylineCoordinates.clear();
+  //   PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+  //     googleApiKey: Constants.APIKEY,
+  //     request: PolylineRequest(
+  //       origin: PointLatLng(originLatlng!.latitude, originLatlng!.longitude),
+  //       destination: PointLatLng(destinationLatlng!.latitude, destinationLatlng!.longitude),
+  //       mode: TravelMode.driving,
+  //     ),
+  //   );
+  //   // if (result.points.isNotEmpty) {
+  //   //   result.points.forEach((PointLatLng point) {
+  //   //     polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+  //   //   });
+  //   // }
+  //   distance = result.distanceTexts!.first.toString();
+  //   duration = result.durationTexts!.first;
+  //   int durationValue = result.durationValues!.first;
+  //   speed = (result.distanceValues!.first/result.durationValues!.first).toString();
+  //   double weight = double.parse(userController.userModel.value.weight.toString()); // Weight in kg
+  //   // double met = 8; // MET value for running
+  //   //  calories = (met * weight * (durationValue / 3600)).toString();
+  //
+  //
+  //
+  //   // polylines.add(Polyline(polylineId: PolylineId("polyline"),color: Colors.blue,width: 6,points: polylineCoordinates));
+  //
+  //   isLoading = false;
+  //   googleMapController.animateCamera(CameraUpdate.newLatLngZoom(originLatlng!, 16));
+  //   setState(() {
+  //
+  //   });
+  // }
 }
 
 
