@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:kompete/features/race/racezone/screens/race_zone_screen.dart';
 import 'package:kompete/logic/Lobby/lobby.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:kompete/logic/Lobby/controller/lobby_controller.dart';
@@ -19,7 +22,7 @@ class LobbyScreen extends StatefulWidget {
 class _LobbyScreenState extends State<LobbyScreen> {
   bool isLoadedinit = false;
   bool isLoading = false;
-
+ // Text for countdown display
   late GoogleMapController googleMapController;
   final LobbyModelController lobbyModelController =
   Get.put(LobbyModelController());
@@ -27,7 +30,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Get.put(LobbyOperationController());
   PolylinePoints polylinePoints = PolylinePoints();
   List<LatLng> polylineCoordinates = [];
-
+   bool isReadyClicked = false;
 
   Set<Marker> markers = {};
   Set<Polyline> polylines = {};
@@ -36,6 +39,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void initState() {
     // TODO: implement initState
+
     super.initState();
 
     isLoadedinit=true;
@@ -95,82 +99,85 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
 
           ///lobby id and distance
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Container(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          "LOBBY ID",
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                            fontStyle: FontStyle.italic,
+          Obx(
+
+            ()=> Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                color: Colors.white,
+                child:Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            "LOBBY ID",
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
-                        ),
-                        Spacer(),
-                        Text(
-                          lobbyModelController.lobbyModel.value.lobbyId ??
-                              "error",
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.bold,
-                            fontStyle: FontStyle.italic,
+                          Spacer(),
+                          Text(
+                            lobbyModelController.lobbyModel.value.lobbyId ??
+                                "error",
+                            style: TextStyle(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 10),
-                        IconButton(
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(
-                                text: lobbyModelController
-                                    .lobbyModel.value.lobbyId ??
-                                    "error"));
-                            final snackBar = SnackBar(
-                              content: Text('Lobby ID copied to clipboard!'),
-                            );
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(snackBar);
-                          },
-                          icon: Icon(
-                            Icons.copy_sharp,
-                            color: Colors.black,
-                            size: 18.sp,
+                          SizedBox(width: 10),
+                          IconButton(
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(
+                                  text: lobbyModelController
+                                      .lobbyModel.value.lobbyId ??
+                                      "error"));
+                              final snackBar = SnackBar(
+                                content: Text('Lobby ID copied to clipboard!'),
+                              );
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(snackBar);
+                            },
+                            icon: Icon(
+                              Icons.copy_sharp,
+                              color: Colors.black,
+                              size: 18.sp,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Divider(),
-                    SizedBox(height: 15),
-                    Row(
-                      children: [
-                        Text(
-                          "TOTAL DISTANCE",
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                            fontStyle: FontStyle.italic,
+                        ],
+                      ),
+                      Divider(),
+                      SizedBox(height: 15),
+                      Row(
+                        children: [
+                          Text(
+                            "TOTAL DISTANCE",
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
-                        ),
-                        Spacer(),
-                        Text(
-                          lobbyModelController.lobbyModel.value.distance ??
-                              "error",
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.bold,
-                            fontStyle: FontStyle.italic,
+                          Spacer(),
+                          Text(
+                            lobbyModelController.lobbyModel.value.distance ??
+                                "error",
+                            style: TextStyle(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 30.sp),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                  ],
+                          SizedBox(width: 30.sp),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -256,29 +263,59 @@ class _LobbyScreenState extends State<LobbyScreen> {
               )),
 
           SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Container(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(25.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "START",
+          Obx(
+                () => lobbyModelController.lobbyModel.value.users!.length >= 2
+                ? Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: InkWell(
+              onTap:() {
+                Get.to(()=>RaceZoneScreen());
+                lobbyOperationController.stopPolling();
+
+              },
+                child: Container(
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(25.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Start",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.sp,
+                          ),
+                        ),
+                        Icon(Icons.arrow_right_alt_outlined, size: 25.sp),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+                : Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(25.0),
+                  child: Center(
+                    child: Text(
+                      "Waiting...",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontStyle: FontStyle.italic,
                         fontSize: 20.sp,
                       ),
                     ),
-                    Icon(Icons.arrow_right_alt_outlined, size: 25.sp),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
+
         ],
       ),
     );

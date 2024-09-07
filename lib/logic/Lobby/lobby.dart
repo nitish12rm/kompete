@@ -57,7 +57,23 @@ class LobbyOperationController extends GetxController{
       throw e.toString();
     }
   }
-
+  ///R
+  Future<void> addReady({required lobbyId}) async{
+    try{
+      LobbyModel lobbyModel = await lobbyRepository.addReady(lobbyId: lobbyId, userId: userController.userModel.value.sId);
+      lobbyModelController.setLobbyModel(lobbyModel);
+    }catch(e){
+      throw e.toString();
+    }
+  }
+  Future<void> removeReady({required lobbyId}) async{
+    try{
+      LobbyModel lobbyModel = await lobbyRepository.removeReady(lobbyId: lobbyId, userId: userController.userModel.value.sId);
+      lobbyModelController.setLobbyModel(lobbyModel);
+    }catch(e){
+      throw e.toString();
+    }
+  }
 
 
 

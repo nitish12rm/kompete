@@ -116,11 +116,66 @@ class LobbyRepository {
     }
   }
 
-  ///JOIN LOBBY
+  ///REMOVE LOBBY
   Future<LobbyModel> removeFromLobby(
       {required String lobbyId, required userId}) async {
     try {
       var response = await _api.sendRequest.post('/lobby/remove',
+          data: jsonEncode({"lobbyId": lobbyId, "userId": userId}));
+      ApiResponse apiResponse = ApiResponse.fromResponse(response);
+
+      LobbyModel lobbyModel = LobbyModel.fromJson(apiResponse.data);
+
+      return lobbyModel;
+    } on DioException catch (dioError) {
+      String errorMessage = "An unexpected error occurred";
+      if (dioError.response != null) {
+// Extract the API error message from the response
+        ApiResponse apiResponse = ApiResponse.fromResponse(dioError.response!);
+        errorMessage = apiResponse.message ?? errorMessage;
+      } else {
+// Handle cases where the error has no response (e.g., network issues)
+        errorMessage = dioError.message ?? "check your network";
+      }
+      throw errorMessage;
+    } catch (error) {
+      throw error.toString();
+    }
+  }
+
+
+  ///ADD READY
+  Future<LobbyModel> addReady(
+      {required String lobbyId, required userId}) async {
+    try {
+      var response = await _api.sendRequest.post('/lobby/ready/add',
+          data: jsonEncode({"lobbyId": lobbyId, "userId": userId}));
+      ApiResponse apiResponse = ApiResponse.fromResponse(response);
+
+      LobbyModel lobbyModel = LobbyModel.fromJson(apiResponse.data);
+
+      return lobbyModel;
+    } on DioException catch (dioError) {
+      String errorMessage = "An unexpected error occurred";
+      if (dioError.response != null) {
+// Extract the API error message from the response
+        ApiResponse apiResponse = ApiResponse.fromResponse(dioError.response!);
+        errorMessage = apiResponse.message ?? errorMessage;
+      } else {
+// Handle cases where the error has no response (e.g., network issues)
+        errorMessage = dioError.message ?? "check your network";
+      }
+      throw errorMessage;
+    } catch (error) {
+      throw error.toString();
+    }
+  }
+
+  ///ADD READY
+  Future<LobbyModel> removeReady(
+      {required String lobbyId, required userId}) async {
+    try {
+      var response = await _api.sendRequest.post('/lobby/ready/remove',
           data: jsonEncode({"lobbyId": lobbyId, "userId": userId}));
       ApiResponse apiResponse = ApiResponse.fromResponse(response);
 

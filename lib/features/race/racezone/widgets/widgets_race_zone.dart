@@ -22,8 +22,8 @@ class StatTitle extends StatelessWidget {
 
 // Widget for player stats column
 class PlayerStatsColumn extends StatelessWidget {
-  final String playerName,eta,distance,speed,calories;
-  const PlayerStatsColumn({Key? key, required this.playerName, required this.eta, required this.distance, required this.speed, required this.calories}) : super(key: key);
+  final String playerName,eta,distance,speed;
+  const PlayerStatsColumn({Key? key, required this.playerName, required this.eta, required this.distance, required this.speed}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +36,6 @@ class PlayerStatsColumn extends StatelessWidget {
           StatValue(value: "$eta min"),
           StatValue(value: "$distance km"),
           StatValue(value: "$speed km/h"),
-          StatValue(value: "$calories kcal"),
         ],
       ),
     );

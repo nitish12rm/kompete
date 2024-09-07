@@ -9,6 +9,7 @@ class LobbyModel {
   String? id;
   String? lobbyId;
   List<User>? users;
+  List<Ready>? ready;
   DateTime? createdAt;
   DateTime? updatedAt;
   int? v;
@@ -22,6 +23,7 @@ class LobbyModel {
     this.id,
     this.lobbyId,
     this.users,
+    this.ready,
     this.createdAt,
     this.updatedAt,
     this.v,
@@ -40,6 +42,7 @@ class LobbyModel {
     id: json["_id"],
     lobbyId: json["lobbyId"],
     users: json["users"] == null ? [] : List<User>.from(json["users"]!.map((x) => User.fromJson(x))),
+    ready: json["ready"] == null ? [] : List<Ready>.from(json["ready"]!.map((x) => Ready.fromJson(x))),
     createdAt: json["createdAt"] == null ? null : DateTime.parse(json["createdAt"]),
     updatedAt: json["updatedAt"] == null ? null : DateTime.parse(json["updatedAt"]),
     v: json["__v"],
@@ -54,6 +57,7 @@ class LobbyModel {
     "_id": id,
     "lobbyId": lobbyId,
     "users": users == null ? [] : List<dynamic>.from(users!.map((x) => x.toJson())),
+    "ready": ready == null ? [] : List<dynamic>.from(ready!.map((x) => x.toJson())),
     "createdAt": createdAt?.toIso8601String(),
     "updatedAt": updatedAt?.toIso8601String(),
     "__v": v,
@@ -140,6 +144,30 @@ class User {
   Map<String, dynamic> toJson() => {
     "userId": userId,
     "role": role,
+    "_id": id,
+  };
+}
+
+class Ready {
+  String? userId;
+  String? id;
+
+  Ready({
+    this.userId,
+    this.id,
+  });
+
+  factory Ready.fromRawJson(String str) => Ready.fromJson(json.decode(str));
+
+  String toRawJson() => json.encode(toJson());
+
+  factory Ready.fromJson(Map<String, dynamic> json) => Ready(
+    userId: json["userId"],
+    id: json["_id"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "userId": userId,
     "_id": id,
   };
 }

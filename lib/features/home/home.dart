@@ -5,7 +5,6 @@ import 'package:kompete/logic/authentication/login.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 
 import '../../logic/authentication/user.dart';
-import '../race/racezone/screens/race_zone_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final UserController userController = Get.put(UserController());
@@ -123,7 +122,7 @@ class HomeScreen extends StatelessWidget {
               child: InkWell(
                 onTap: (){
                   // Get.to(()=>ModeSelectScreen());
-                  Get.to(()=>RaceZoneScreen());
+                  Get.to(()=>ModeSelectScreen());
                 },
                 child: Container(
                   color: Colors.white,
