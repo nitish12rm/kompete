@@ -2,7 +2,11 @@
 
 // Widget for stat titles like ETA, DISTANCE, etc.
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+
+import '../screens/race_zone_screen.dart';
 
 class StatTitle extends StatelessWidget {
   final String title;
@@ -23,7 +27,7 @@ class StatTitle extends StatelessWidget {
 // Widget for player stats column
 class PlayerStatsColumn extends StatelessWidget {
   final String playerName,eta,distance,speed;
-  const PlayerStatsColumn({Key? key, required this.playerName, required this.eta, required this.distance, required this.speed}) : super(key: key);
+   PlayerStatsColumn({Key? key, required this.playerName, required this.eta, required this.distance, required this.speed}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +67,7 @@ class StatValue extends StatelessWidget {
 class Players extends StatelessWidget {
   final String playerName;
 
-  const Players({Key? key, required this.playerName}) : super(key: key);
+   Players({Key? key, required this.playerName}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

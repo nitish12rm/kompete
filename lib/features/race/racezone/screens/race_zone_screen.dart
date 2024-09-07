@@ -19,11 +19,14 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../../constants/const.dart';
 import '../../../../data/model/Race/race_model.dart';
 import '../../../../logic/race/race_model_controller.dart';
+import '../../../../utils/latlng_list.dart';
 import '../widgets/widgets_race_zone.dart';
 
 class RaceZoneScreen extends StatefulWidget {
-  RaceZoneScreen({super.key});
-
+  RaceZoneScreen({super.key, required this.polyline, required this.destinationLatlng, required this.distanceGM});
+  final   Set<Polyline> polyline;
+  final LatLng destinationLatlng;
+  final String distanceGM;
   @override
   State<RaceZoneScreen> createState() => _RaceZoneScreenState();
 
@@ -33,15 +36,8 @@ class RaceZoneScreen extends StatefulWidget {
 class _RaceZoneScreenState extends State<RaceZoneScreen> {
   final RaceModelModelController raceModelModelController = Get.put(RaceModelModelController());
  final MarkerController markerController = Get.put(MarkerController());
-  // Player-specific state variables
-  RaceModel racer1 = RaceModel();
-  RaceModel racer2 = RaceModel();
-  RaceModel racer3 = RaceModel();
-  RaceModel racer4 = RaceModel();
-  Map<String, dynamic> player1Stats = {};
-  Map<String, dynamic> player2Stats = {};
-  Map<String, dynamic> player3Stats = {};
-  Map<String, dynamic> player4Stats = {};
+ final RaceZoneController raceZoneController = Get.put(RaceZoneController());
+
   final double destinationThreshold = 5.0; // Threshold in meters to determine if a player has reached the destination
   List<String> finishedPlayers = []; // Track players who have finished
   Map<String, int> playerRanks = {}; // Store player ranks
@@ -114,11 +110,14 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
         raceModel = RaceModel.fromJson(inc);
         log(raceModel.user!.name!);
         log("recieved redis");
-        // rank = (inc["rank"] as List<dynamic>).toSet().cast<String>();
+        // rank = (raceModel.rank as List<dynamic>).toSet().cast<String>();
         determineMarkers();
         _updatePlayerStats();
 
       }
+      setState(() {
+
+      });
     }
   }
   void _updatePlayerStats() {
@@ -137,54 +136,7 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
 
     }
   }
-  // void _updatePlayerStats() {
-  //   if (inc['userid'] == playa[0]) {
-  //     setState(() {
-  //       player1Stats = inc[playa[0]];
-  //     });
-  //   } else if (inc['userid'] == playa[1]) {
-  //     setState(() {
-  //       player2Stats = inc[playa[1]];
-  //     });
-  //   } else if (inc['userid'] == playa[2]) {
-  //     setState(() {
-  //       player3Stats = inc[playa[2]];
-  //     });
-  //   } else if (inc['userid'] == playa[3]) {
-  //     setState(() {
-  //       player4Stats = inc[playa[3]];
-  //     });
-  //   }
-  // }
   determineMarkers(){
-    // if(inc["userid"]==playa[0]){
-    //   markers.removeWhere((element) => element.mapsId.value == 'origin');
-    //   markers.add(
-    //     Marker(
-    //         markerId: MarkerId('origin'),
-    //         position: LatLng(inc["user"]["coord"][0], inc["user"]["coord"][1]),
-    //         icon: BitmapDescriptor.defaultMarker,
-    //         infoWindow: InfoWindow(title: inc["user"]["name"])
-    //     ),
-    //   );
-    //   setState(() {
-    //
-    //   });
-    // }
-    // else if(inc["userid"]==playa[1]){
-    //   markers.removeWhere((element) => element.mapsId.value == 'origin2');
-    //   markers.add(
-    //     Marker(
-    //         markerId: MarkerId('origin2'),
-    //         position: LatLng(inc["user"]["coord"][0], inc["user"]["coord"][1]),
-    //         icon: BitmapDescriptor.defaultMarker,
-    //         infoWindow: InfoWindow(title: inc["user"]["name"])
-    //     ),
-    //   );
-    //   setState(() {
-    //
-    //   });
-    // }
     if(raceModel.userid==playa[0]){
       markerController.markers.removeWhere((element) => element.mapsId.value == 'origin');
       markerController.markers.add(
@@ -232,19 +184,8 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
       }
     });
   }
-
-  bool _isPlayerInCircle(LatLng playerPosition, LatLng destination, double radiusInMeters) {
-    // Convert the radius from meters to degrees (rough conversion)
-    const double meterToLatLng = 1 / 111320.0;  // Approximation: 1 degree latitude ≈ 111.32 km
-    double radiusInDegrees = radiusInMeters * meterToLatLng;
-
-    // Calculate the difference in latitudes and longitudes
-    double deltaLat = playerPosition.latitude - destination.latitude;
-    double deltaLon = playerPosition.longitude - destination.longitude;
-
-    // Check if the point is inside the circle using the circle formula
-    return (deltaLat * deltaLat + deltaLon * deltaLon) <= (radiusInDegrees * radiusInDegrees);
-  }
+  List<LatLng> coordinates=[];
+///INIT
   @override
   void initState() {
     determineLivePosition();
@@ -290,6 +231,7 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
                         compassEnabled: true,
                         scrollGesturesEnabled: true,
                         zoomGesturesEnabled: true,
+                        polylines: widget.polyline,
                         markers:Set<Marker>.of(markerController.markers),
                         onMapCreated: (controller) {
                           googleMapController = controller;
@@ -458,26 +400,17 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
           );
           _totalDistance += distance; // Update total distance
 
-
-          // if(_totalDistance>220){
-          //   print("won");
-          //   rank.add(userController.userModel.value.sId.toString());
-          //   speed="0.0";
-          //   _positionSubscription?.cancel();
-          //   setState(() {
-          //
-          //   });
-          //
-          // }
-
-
         }  _previousPosition = position;
 
-        log(_isPlayerInCircle(originLatlng!, destinationLatlng, 10).toString()) ;
-        double distanceToDestination = Geolocator.distanceBetween(originLatlng!.latitude, originLatlng!.longitude, destinationLatlng.latitude, destinationLatlng.longitude);
-        log(distanceToDestination.toString());
-        if(distanceToDestination<=10){
-          log("won");
+        double distanceToDestination = Geolocator.distanceBetween(originLatlng!.latitude, originLatlng!.longitude, widget.destinationLatlng.latitude, widget.destinationLatlng.longitude);
+        // log(distanceToDestination.toString());
+        if(distanceToDestination<=25){
+          log("won $distanceToDestination");
+          raceZoneController.won.value = true;
+          rank.add(userController.user.sId!);
+        }
+        else{
+          log("not yet $distanceToDestination");
         }
 
         initialPosition = CameraPosition(target: originLatlng!, zoom: 12);
@@ -490,41 +423,55 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
     });
 
   }
-// markers.add(
-// );
 
-// getPolyline() async{
-//   polylineCoordinates.clear();
-//   PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-//     googleApiKey: Constants.APIKEY,
-//     request: PolylineRequest(
-//       origin: PointLatLng(originLatlng!.latitude, originLatlng!.longitude),
-//       destination: PointLatLng(destinationLatlng!.latitude, destinationLatlng!.longitude),
-//       mode: TravelMode.driving,
-//     ),
-//   );
-//   // if (result.points.isNotEmpty) {
-//   //   result.points.forEach((PointLatLng point) {
-//   //     polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-//   //   });
-//   // }
-//   distance = result.distanceTexts!.first.toString();
-//   duration = result.durationTexts!.first;
-//   int durationValue = result.durationValues!.first;
-//   speed = (result.distanceValues!.first/result.durationValues!.first).toString();
-//   double weight = double.parse(userController.userModel.value.weight.toString()); // Weight in kg
-//   // double met = 8; // MET value for running
-//   //  calories = (met * weight * (durationValue / 3600)).toString();
-//
-//
-//
-//   // polylines.add(Polyline(polylineId: PolylineId("polyline"),color: Colors.blue,width: 6,points: polylineCoordinates));
-//
-//   isLoading = false;
-//   googleMapController.animateCamera(CameraUpdate.newLatLngZoom(originLatlng!, 16));
-//   setState(() {
-//
-//   });
-// }
+
+  // getPolyline() async {
+  //   isLoading = true;
+  //   setState(() {});
+  //
+  //   try {
+  //
+  //
+  //     if (polylineCoordinates.isNotEmpty) {
+  //
+  //       polylines.add(Polyline(
+  //           polylineId: PolylineId("polyline"),
+  //           color: Colors.blue,
+  //           width: 7,
+  //           points: polylineCoordinates));
+  //
+  //       googleMapController
+  //           .animateCamera(CameraUpdate.newLatLngZoom(originLatlng!, 10));
+  //     } else {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Route not found. Please try again.')),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     // If there's an error in fetching the route, show an error message
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //           backgroundColor: Colors.red,
+  //           content: Text(
+  //               'Failed to fetch route. Please check your connection or end location and try again.')),
+  //     );
+  //   } finally {
+  //     isLoading = false;
+  //     setState(() {});
+  //   }
+  // }
+@override
+  void dispose() {
+    // TODO: implement dispose
+
+  _positionSubscription!.cancel();
+  _messageTimer!.cancel();
+    super.dispose();
+  }
 }
 
+class RaceZoneController extends GetxController{
+  var won = false.obs;
+
+
+}

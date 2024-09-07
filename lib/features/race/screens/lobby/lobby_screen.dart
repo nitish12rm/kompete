@@ -269,7 +269,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
               padding: const EdgeInsets.all(8.0),
               child: InkWell(
               onTap:() {
-                Get.to(()=>RaceZoneScreen());
+                Get.to(()=>RaceZoneScreen(polyline: polylines, destinationLatlng:LatLng(
+                    lobbyModelController.lobbyModel.value
+                        .coordinates?[0].markers?[0].destination?[0] ??
+                        0.0,
+                    lobbyModelController.lobbyModel.value
+                        .coordinates?[0].markers?[0].destination?[1] ??
+                        0.0), distanceGM: lobbyModelController.lobbyModel.value.distance! ,));
                 lobbyOperationController.stopPolling();
 
               },

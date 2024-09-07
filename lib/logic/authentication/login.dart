@@ -6,7 +6,6 @@ import 'package:kompete/data/model/user/user.dart';
 import 'package:kompete/data/repository/user%20repository/user_repo.dart';
 import 'package:kompete/features/Authentication/screens/signin/sign_in.dart';
 import 'package:kompete/features/home/home.dart';
-import 'package:kompete/features/race/racezone/screens/race_zone_screen.dart';
 import 'package:kompete/logic/authentication/user.dart';
 import 'package:kompete/navigation_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -62,7 +61,7 @@ class LoginController extends GetxController {
         );
         userController.setUserModel(userModel);
        await Future.delayed(Duration(milliseconds: 1000));
-        Get.offAll(() => RaceZoneScreen());
+        Get.offAll(() => NavigationScreen());
       } catch (error) {
         // _showErrorDialog('Auto-login failed: ${error.toString()}');
         // await Future.delayed(Duration(milliseconds: 1000));
