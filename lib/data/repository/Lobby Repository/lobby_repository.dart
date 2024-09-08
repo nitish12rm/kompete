@@ -14,6 +14,7 @@ class LobbyRepository {
   Future<LobbyModel> createLobby(
       {required String userId,
       required double originLat,
+        required String name,
       required double originLng,
       required double destinationLat,
       required double destinationLng,
@@ -22,6 +23,7 @@ class LobbyRepository {
     try {
       var response = await _api.sendRequest.post('/lobby/create',
           data: jsonEncode({
+"name":name,
             'createdBy': userId,
             'role': 'admin',
             "coordinates": [
@@ -91,10 +93,10 @@ class LobbyRepository {
 
 ///JOIN LOBBY
   Future<LobbyModel> joinLobby(
-      {required String lobbyId, required userId}) async {
+      {required String lobbyId, required userId, required name}) async {
     try {
       var response = await _api.sendRequest.post('/lobby/join',
-          data: jsonEncode({"lobbyId": lobbyId, "userId": userId}));
+          data: jsonEncode({"lobbyId": lobbyId, "userId": userId, "name":name}));
       ApiResponse apiResponse = ApiResponse.fromResponse(response);
 
       LobbyModel lobbyModel = LobbyModel.fromJson(apiResponse.data);
@@ -171,12 +173,38 @@ class LobbyRepository {
     }
   }
 
-  ///ADD READY
+  ///REMOVE READY
   Future<LobbyModel> removeReady(
       {required String lobbyId, required userId}) async {
     try {
       var response = await _api.sendRequest.post('/lobby/ready/remove',
           data: jsonEncode({"lobbyId": lobbyId, "userId": userId}));
+      ApiResponse apiResponse = ApiResponse.fromResponse(response);
+
+      LobbyModel lobbyModel = LobbyModel.fromJson(apiResponse.data);
+
+      return lobbyModel;
+    } on DioException catch (dioError) {
+      String errorMessage = "An unexpected error occurred";
+      if (dioError.response != null) {
+// Extract the API error message from the response
+        ApiResponse apiResponse = ApiResponse.fromResponse(dioError.response!);
+        errorMessage = apiResponse.message ?? errorMessage;
+      } else {
+// Handle cases where the error has no response (e.g., network issues)
+        errorMessage = dioError.message ?? "check your network";
+      }
+      throw errorMessage;
+    } catch (error) {
+      throw error.toString();
+    }
+  }
+
+  Future<LobbyModel> addRank(
+      {required String lobbyId, required userId, required int duration}) async {
+    try {
+      var response = await _api.sendRequest.post('/lobby/rank',
+          data: jsonEncode({"lobbyId": lobbyId, "userId": userId,"duration": duration}));
       ApiResponse apiResponse = ApiResponse.fromResponse(response);
 
       LobbyModel lobbyModel = LobbyModel.fromJson(apiResponse.data);

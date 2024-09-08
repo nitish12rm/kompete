@@ -74,8 +74,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void dispose() {
     lobbyOperationController.stopPolling();
-    lobbyOperationController.removeFromLobby(
-        lobbyId: lobbyModelController.lobbyModel.value.lobbyId);
     super.dispose();
   }
 
@@ -209,7 +207,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   0,
                               // Total number of items
                               itemBuilder: (context, index) {
-                                return Players(playerName: "Player $index");
+                                return Players(playerName: lobbyModelController.lobbyModel.value.users![index].name!);
                               },
                             ),
                       ),
@@ -275,8 +273,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         0.0,
                     lobbyModelController.lobbyModel.value
                         .coordinates?[0].markers?[0].destination?[1] ??
-                        0.0), distanceGM: lobbyModelController.lobbyModel.value.distance! ,));
+                        0.0), distanceGM: lobbyModelController.lobbyModel.value.distance!, lobbyId: lobbyModelController.user.lobbyId!,users:lobbyModelController.lobbyModel.value.users!.map((user) => user.userId).toList(), originLatlng: LatLng(
+                    lobbyModelController.lobbyModel.value
+                        .coordinates?[0].markers?[0].origin?[0] ??
+                        0.0,
+                    lobbyModelController.lobbyModel.value
+                        .coordinates?[0].markers?[0].origin?[1] ??
+                        0.0),),);
                 lobbyOperationController.stopPolling();
+
 
               },
                 child: Container(

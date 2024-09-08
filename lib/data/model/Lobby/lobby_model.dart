@@ -9,6 +9,7 @@ class LobbyModel {
   String? id;
   String? lobbyId;
   List<User>? users;
+  List<Rank>? rank;
   List<Ready>? ready;
   DateTime? createdAt;
   DateTime? updatedAt;
@@ -23,6 +24,7 @@ class LobbyModel {
     this.id,
     this.lobbyId,
     this.users,
+    this.rank,
     this.ready,
     this.createdAt,
     this.updatedAt,
@@ -42,6 +44,7 @@ class LobbyModel {
     id: json["_id"],
     lobbyId: json["lobbyId"],
     users: json["users"] == null ? [] : List<User>.from(json["users"]!.map((x) => User.fromJson(x))),
+    rank:json["rank"] == null ? [] : List<Rank>.from(json["rank"]!.map((x) => Rank.fromJson(x))) ,
     ready: json["ready"] == null ? [] : List<Ready>.from(json["ready"]!.map((x) => Ready.fromJson(x))),
     createdAt: json["createdAt"] == null ? null : DateTime.parse(json["createdAt"]),
     updatedAt: json["updatedAt"] == null ? null : DateTime.parse(json["updatedAt"]),
@@ -57,6 +60,7 @@ class LobbyModel {
     "_id": id,
     "lobbyId": lobbyId,
     "users": users == null ? [] : List<dynamic>.from(users!.map((x) => x.toJson())),
+    "rank": rank == null ? [] : List<dynamic>.from(rank!.map((x) => x.toJson())),
     "ready": ready == null ? [] : List<dynamic>.from(ready!.map((x) => x.toJson())),
     "createdAt": createdAt?.toIso8601String(),
     "updatedAt": updatedAt?.toIso8601String(),
@@ -122,6 +126,8 @@ class Marker {
 
 class User {
   String? userId;
+  String? name;
+  String? picture;
   String? role;
   String? id;
 
@@ -129,6 +135,8 @@ class User {
     this.userId,
     this.role,
     this.id,
+    this.name,
+    this.picture
   });
 
   factory User.fromRawJson(String str) => User.fromJson(json.decode(str));
@@ -136,12 +144,16 @@ class User {
   String toRawJson() => json.encode(toJson());
 
   factory User.fromJson(Map<String, dynamic> json) => User(
+    name:json['name'],
+    picture:json['picture'],
     userId: json["userId"],
     role: json["role"],
     id: json["_id"],
   );
 
   Map<String, dynamic> toJson() => {
+    "name": name,
+    "picture":picture,
     "userId": userId,
     "role": role,
     "_id": id,
@@ -170,4 +182,49 @@ class Ready {
     "userId": userId,
     "_id": id,
   };
+}
+
+// class RankModel {
+//   List<Rank>? rank;
+//
+//   RankModel({this.rank});
+//
+//   RankModel.fromJson(Map<String, dynamic> json) {
+//     if (json['rank'] != null) {
+//       rank = <Rank>[];
+//       json['rank'].forEach((v) {
+//         rank!.add(new Rank.fromJson(v));
+//       });
+//     }
+//   }
+//
+//   Map<String, dynamic> toJson() {
+//     final Map<String, dynamic> data = new Map<String, dynamic>();
+//     if (this.rank != null) {
+//       data['rank'] = this.rank!.map((v) => v.toJson()).toList();
+//     }
+//     return data;
+//   }
+// }
+
+class Rank {
+  String? userId;
+  int? duration;
+  String? sId;
+
+  Rank({this.userId, this.duration, this.sId});
+
+  Rank.fromJson(Map<String, dynamic> json) {
+    userId = json['userId'];
+    duration = json['duration'];
+    sId = json['_id'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['userId'] = this.userId;
+    data['duration'] = this.duration;
+    data['_id'] = this.sId;
+    return data;
+  }
 }

@@ -9,6 +9,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:kompete/features/home/home.dart';
+import 'package:kompete/features/race/controller/lobby_controller.dart';
 import 'package:kompete/logic/authentication/user.dart';
 import 'package:kompete/logic/race/marker_controller.dart';
 import 'package:redis/redis.dart';
@@ -18,36 +20,56 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../../constants/const.dart';
 import '../../../../data/model/Race/race_model.dart';
+import '../../../../logic/Lobby/lobby.dart';
 import '../../../../logic/race/race_model_controller.dart';
 import '../../../../utils/latlng_list.dart';
+import '../../final/screen/final_screen.dart';
 import '../widgets/widgets_race_zone.dart';
 
 class RaceZoneScreen extends StatefulWidget {
-  RaceZoneScreen({super.key, required this.polyline, required this.destinationLatlng, required this.distanceGM});
-  final   Set<Polyline> polyline;
+  RaceZoneScreen(
+      {super.key,
+      required this.polyline,
+      required this.destinationLatlng,
+      required this.distanceGM,
+      required this.lobbyId,
+        required this.users, required this.originLatlng
+      }
+      );
+
+  final Set<Polyline> polyline;
   final LatLng destinationLatlng;
+  final LatLng originLatlng;
   final String distanceGM;
+  final String lobbyId;
+  final List<String?> users;
+
   @override
   State<RaceZoneScreen> createState() => _RaceZoneScreenState();
-
 }
 
-
 class _RaceZoneScreenState extends State<RaceZoneScreen> {
-  final RaceModelModelController raceModelModelController = Get.put(RaceModelModelController());
- final MarkerController markerController = Get.put(MarkerController());
- final RaceZoneController raceZoneController = Get.put(RaceZoneController());
+  Timer? _timer;
 
-  final double destinationThreshold = 5.0; // Threshold in meters to determine if a player has reached the destination
+  final RaceModelModelController raceModelModelController =
+      Get.put(RaceModelModelController());
+  final MarkerController markerController = Get.put(MarkerController());
+  final RaceZoneController raceZoneController = Get.put(RaceZoneController());
+  final LobbyOperationController lobbyOperationController =
+      Get.put(LobbyOperationController());
+
+  final double destinationThreshold =
+      5.0; // Threshold in meters to determine if a player has reached the destination
   List<String> finishedPlayers = []; // Track players who have finished
   Map<String, int> playerRanks = {}; // Store player ranks
   int currentRank = 1; // Current rank to assign to the next player who finishes
-
+  double distanceToDestination = 0;
   UserController userController = Get.put(UserController());
   final WebSocketChannel channel =
-  IOWebSocketChannel.connect('ws://192.168.1.12:8080');
+      IOWebSocketChannel.connect('ws://192.168.1.7:8080');
   Timer? _messageTimer;
-  Duration _timerInterval = Duration(seconds: 1); // Adjust the interval as needed
+  Duration _timerInterval =
+      Duration(seconds: 1); // Adjust the interval as needed
 
   late GoogleMapController googleMapController;
 
@@ -61,12 +83,10 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
 
   LatLng? originLatlng2;
 
-  LatLng destinationLatlng = LatLng(28.573225858000086, 77.34857769872204);
-
   CameraPosition? initialPosition;
 
   Set<Marker> markers = {};
-  Set<String> rank ={};
+  Set<String> rank = {};
 
   Set<Polyline> polylines = {};
   double _totalDistance = 0.0; // Total distance covered in meters
@@ -74,7 +94,7 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
   String distance = "";
   String duration = "";
   String speed = "";
-  String calories = "";
+
 
   bool isLoading = true;
 
@@ -85,25 +105,18 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
   TextEditingController endController = TextEditingController();
   Stream<Position>? _positionStream;
   StreamSubscription<Position>? _positionSubscription;
-  List<String> playa = ["66d43937c1266cdb7d1fdb55", "66d2e811efee23c428ba902f", "dfsfs", "fsdfds"];
+
   dynamic inc;
   RaceModel raceModel = RaceModel();
 
   Future<void> _initializeRedis() async {
-    Command cmd = await RedisConnection().connect('192.168.1.12', 6379);
+    Command cmd = await RedisConnection().connect('192.168.1.7', 6379);
     final pubsub = PubSub(cmd);
-    pubsub.subscribe(['abcde']);
+    pubsub.subscribe([widget.lobbyId]);
     final stream = pubsub.getStream();
     var streamWithoutErrors = stream.handleError((e) => print("error $e"));
 
     await for (final msg in streamWithoutErrors) {
-      // inc = jsonDecode(msg[2].toString());
-      // if (inc is! int || inc == null) {
-      //   rank = (inc["rank"] as List<dynamic>).toSet().cast<String>();
-      //   determineMarkers();
-      //   _updatePlayerStats();
-      //
-      // }
       inc = jsonDecode(msg[2].toString());
       // log(inc);
       if (inc is! int || inc == null) {
@@ -113,53 +126,44 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
         // rank = (raceModel.rank as List<dynamic>).toSet().cast<String>();
         determineMarkers();
         _updatePlayerStats();
-
       }
-      setState(() {
-
-      });
+      setState(() {});
     }
   }
+
   void _updatePlayerStats() {
-    if (raceModel.userid == playa[0]) {
-
+    if (raceModel.userid == widget.users[0]) {
       raceModelModelController.setRaceModel1(raceModel);
-
-    } else if (raceModel.userid == playa[1]) {
+    } else if (raceModel.userid == widget.users[1]) {
       raceModelModelController.setRaceModel2(raceModel);
-
-    } else if (raceModel.userid == playa[2]) {
+    } else if (raceModel.userid == widget.users[2]) {
       raceModelModelController.setRaceModel3(raceModel);
-
-    } else if (raceModel.userid== playa[3]) {
+    } else if (raceModel.userid == widget.users[3]) {
       raceModelModelController.setRaceModel4(raceModel);
-
     }
   }
-  determineMarkers(){
-    if(raceModel.userid==playa[0]){
-      markerController.markers.removeWhere((element) => element.mapsId.value == 'origin');
+
+  determineMarkers() {
+    if (raceModel.userid == widget.users[0]) {
+      markerController.markers
+          .removeWhere((element) => element.mapsId.value == 'origin');
       markerController.markers.add(
         Marker(
             markerId: MarkerId('origin'),
             position: LatLng(inc["user"]["coord"][0], inc["user"]["coord"][1]),
             icon: BitmapDescriptor.defaultMarker,
-            infoWindow: InfoWindow(title: inc["user"]["name"])
-        ),
+            infoWindow: InfoWindow(title: inc["user"]["name"])),
       );
-
-    }
-    else if(raceModel.userid==playa[1]){
-      markerController.markers.removeWhere((element) => element.mapsId.value == 'origin2');
+    } else if (raceModel.userid == widget.users[1]) {
+      markerController.markers
+          .removeWhere((element) => element.mapsId.value == 'origin2');
       markerController.markers.add(
         Marker(
             markerId: MarkerId('origin2'),
             position: LatLng(inc["user"]["coord"][0], inc["user"]["coord"][1]),
             icon: BitmapDescriptor.defaultMarker,
-            infoWindow: InfoWindow(title: inc["user"]["name"])
-        ),
+            infoWindow: InfoWindow(title: inc["user"]["name"])),
       );
-
     }
   }
 
@@ -176,7 +180,7 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
             "speed": speed
           },
           "userid": userController.userModel.value.sId,
-          "lobbyid": "abcde",
+          "lobbyid": widget.lobbyId,
           "rank": rank.toList()
         });
 
@@ -184,131 +188,243 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
       }
     });
   }
-  List<LatLng> coordinates=[];
-///INIT
+
+  void startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      raceZoneController.second.value++;
+    });
+  }
+
+  void stopTimer() {
+    _timer?.cancel();
+    _positionSubscription!.cancel();
+    speed = "0.0";
+  }
+
+  List<LatLng> coordinates = [];
+  double? kilometers;
+  double? metersDistance;
+
+  ///INIT
   @override
   void initState() {
+
     determineLivePosition();
     _initializeRedis();
     _startMessageTimer();
+    startTimer();
+    kilometers = double.parse(widget.distanceGM.split(" ")[0]);
+
+    // Convert kilometers to meters
+    metersDistance = kilometers! * 1000;
+    markerController.markers
+        .removeWhere((element) => element.mapsId.value == 'start');
+    markerController.markers.add(
+      Marker(
+          markerId: MarkerId('start'),
+          position: widget.originLatlng,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: InfoWindow(title: "START")),
+    );
+    markerController.markers
+        .removeWhere((element) => element.mapsId.value == 'end');
+    markerController.markers.add(
+      Marker(
+          markerId: MarkerId('end'),
+          position: widget.destinationLatlng,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+          infoWindow: InfoWindow(title: "END")),
+    );
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-
-    return inc == null|| inc is int ?Center(child: CircularProgressIndicator(),): Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          "Race Zone",
-          style: TextStyle(color: Colors.black),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: IconThemeData(color: Colors.black),
-      ),
-      body: Column(
-        children: [
-          // Space for Map
-        Container(
-              height: 57.h,
-              color: Colors.black.withOpacity(0.05),
-              child: initialPosition == null
-                  ? Center(
-                child: CircularProgressIndicator(),
-              )
-                  : Stack(
-                children: [
-                Obx(
-                      () => GoogleMap(
-                        mapType: MapType.normal,
-                        initialCameraPosition: initialPosition!,
-                        myLocationEnabled: true,
-                        tiltGesturesEnabled: true,
-                        compassEnabled: true,
-                        scrollGesturesEnabled: true,
-                        zoomGesturesEnabled: true,
-                        polylines: widget.polyline,
-                        markers:Set<Marker>.of(markerController.markers),
-                        onMapCreated: (controller) {
-                          googleMapController = controller;
-                        },
-                      ),
-                ),
-
-                  Container(child: Text(inc["rank"].toString()),)
-                ],
+    return inc == null || inc is int
+        ? Center(
+            child: CircularProgressIndicator(),
+          )
+        : Scaffold(
+            resizeToAvoidBottomInset: false,
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              title: Text(
+                "Race zone",
+                style: TextStyle(fontSize: 20.sp,fontStyle: FontStyle.italic,color: Colors.white,fontWeight: FontWeight.bold),
               ),
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: true,
+              iconTheme: IconThemeData(color: Colors.white),
             ),
+            body: Column(
+              children: [
+                Container(height: 5.h,color: Colors.black,child: Row(mainAxisAlignment: MainAxisAlignment.center,children: [
+                  Obx(() => Container(
+                    child: Text(raceZoneController.second.value
+                        .toString(),style: TextStyle(fontSize: 20.sp,fontStyle: FontStyle.italic,color: Colors.white,fontWeight: FontWeight.bold),),
+                  ))
+                ],),),
+                // Space for Map
+                Container(
+                  height: 52.h,
+                  color: Colors.black.withOpacity(0.05),
+                  child: initialPosition == null
+                      ? Center(
+                          child: CircularProgressIndicator(),
+                        )
+                      : Stack(
+                          children: [
+                            Obx(
+                              () => GoogleMap(
+                                mapType: MapType.normal,
+                                initialCameraPosition: initialPosition!,
+                                myLocationEnabled: true,
+                                tiltGesturesEnabled: true,
+                                compassEnabled: true,
+                                scrollGesturesEnabled: true,
+                                zoomGesturesEnabled: true,
+                                polylines: widget.polyline,
+                                markers:
+                                    Set<Marker>.of(markerController.markers),
+                                onMapCreated: (controller) {
+                                  googleMapController = controller;
+                                },
+                              ),
+                            ),
 
+                            // Container(child: Text(inc["rank"].toString()),),
 
-          // Player Stats Section
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    // Column Titles
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          height: 10.h,
+                          ],
                         ),
-                        StatTitle(title: "ETA"),
-                        StatTitle(title: "DISTANCE"),
-                        StatTitle(title: "SPEED"),
-                        StatTitle(title: "CALORIES"),
-                      ],
-                    ),
-                    // Player Stats Columns
-                    Obx(
-                          ()=> PlayerStatsColumn(
-                        playerName: raceModelModelController.raceModel1.value.user?.name??"",
-                        eta: raceModelModelController.raceModel1.value.user?.coord?[0].toString()??"",
-                        distance: raceModelModelController.raceModel1.value.user?.distance ?? "",
-                        speed: raceModelModelController.raceModel1.value.user?.speed ?? "",
-
-                      ),
-                    ),
-                    Obx(
-                          ()=> PlayerStatsColumn(
-                        playerName: raceModelModelController.raceModel2.value.user?.name??"",
-                        eta: raceModelModelController.raceModel2.value.user?.eta??"",
-                        distance: raceModelModelController.raceModel2.value.user?.distance ?? "",
-                        speed: raceModelModelController.raceModel2.value.user?.speed ?? "",
-                      ),
-                    ),
-                    Obx(
-                          ()=> PlayerStatsColumn(
-                        playerName: raceModelModelController.raceModel4.value.user?.name??"",
-                        eta: raceModelModelController.raceModel4.value.user?.eta??"",
-                        distance: raceModelModelController.raceModel4.value.user?.distance ?? "",
-                        speed: raceModelModelController.raceModel4.value.user?.speed ?? "",
-                      ),
-                    ),
-                    Obx(
-                          ()=> PlayerStatsColumn(
-                        playerName: raceModelModelController.raceModel3.value.user?.name??"",
-                        eta: raceModelModelController.raceModel3.value.user?.eta??"",
-                        distance: raceModelModelController.raceModel3.value.user?.distance ?? "",
-                        speed: raceModelModelController.raceModel3.value.user?.speed ?? "",
-                      ),
-                    ),
-                  ],
                 ),
-              ),
+
+                // Player Stats Section
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          // Column Titles
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                height: 10.h,
+                              ),
+                              StatTitle(title: "ETA"),
+                              StatTitle(title: "DISTANCE"),
+                              StatTitle(title: "SPEED"),
+                            ],
+                          ),
+                          // Player Stats Columns
+                          Obx(
+                            () => PlayerStatsColumn(
+                              playerName: raceModelModelController
+                                      .raceModel1.value.user?.name ??
+                                  "",
+                              eta: raceModelModelController
+                                      .raceModel1.value.user?.coord?[0]
+                                      .toString() ??
+                                  "",
+                              distance: raceModelModelController
+                                      .raceModel1.value.user?.distance ??
+                                  "",
+                              speed: raceModelModelController
+                                      .raceModel1.value.user?.speed ??
+                                  "",
+                            ),
+                          ),
+                          Obx(
+                            () => PlayerStatsColumn(
+                              playerName: raceModelModelController
+                                      .raceModel2.value.user?.name ??
+                                  "",
+                              eta: raceModelModelController
+                                      .raceModel2.value.user?.eta ??
+                                  "",
+                              distance: raceModelModelController
+                                      .raceModel2.value.user?.distance ??
+                                  "",
+                              speed: raceModelModelController
+                                      .raceModel2.value.user?.speed ??
+                                  "",
+                            ),
+                          ),
+                          Obx(
+                            () => PlayerStatsColumn(
+                              playerName: raceModelModelController
+                                      .raceModel4.value.user?.name ??
+                                  "",
+                              eta: raceModelModelController
+                                      .raceModel4.value.user?.eta ??
+                                  "",
+                              distance: raceModelModelController
+                                      .raceModel4.value.user?.distance ??
+                                  "",
+                              speed: raceModelModelController
+                                      .raceModel4.value.user?.speed ??
+                                  "",
+                            ),
+                          ),
+                          Obx(
+                            () => PlayerStatsColumn(
+                              playerName: raceModelModelController
+                                      .raceModel3.value.user?.name ??
+                                  "",
+                              eta: raceModelModelController
+                                      .raceModel3.value.user?.eta ??
+                                  "",
+                              distance: raceModelModelController
+                                      .raceModel3.value.user?.distance ??
+                                  "",
+                              speed: raceModelModelController
+                                      .raceModel3.value.user?.speed ??
+                                  "",
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                if (distanceToDestination < metersDistance! * 0.2)
+                  InkWell(
+                      onTap: () {
+                        if(raceZoneController.won.value){
+                          Get.to(()=>FinalScreen());
+                        }else{
+                          log("won $distanceToDestination");
+                          raceZoneController.won.value = true;
+                          rank.add(userController.user.sId!);
+                          lobbyOperationController.addRank(lobbyId:widget.lobbyId , duration: raceZoneController.second.value);
+                          stopTimer();
+                          Get.to(()=>FinalScreen());
+                        }
+                        
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: 6.h,
+                        color: Colors.black,
+                        child: Center(
+                            child: Text(
+                          "FINISH!",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontStyle: FontStyle.italic,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 19.sp),
+                        )),
+                      ))
+              ],
             ),
-          ),
-        ],
-      ),
-    );
+          );
   }
+
   ///LIVE COORDINATES STREAM
   Future<void> determineLivePosition() async {
     final GeolocatorPlatform _geoLocatorPlatform = GeolocatorPlatform.instance;
@@ -346,7 +462,7 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
           intervalDuration: const Duration(seconds: 1),
           foregroundNotificationConfig: const ForegroundNotificationConfig(
             notificationText:
-            "Example app will continue to receive your location even when you aren't using it",
+                "Example app will continue to receive your location even when you aren't using it",
             notificationTitle: "Running in Background",
             enableWakeLock: true,
           ));
@@ -377,18 +493,19 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
     //   setState(() {});
     // });
 
-    _positionSubscription =_geoLocatorPlatform
+    _positionSubscription = _geoLocatorPlatform
         .getPositionStream(locationSettings: locationSettings)
         .listen((Position? position) async {
       if (position != null) {
         if (position.speed > 0.5) {
-          speed = "${(position.speed * 3.6).toStringAsFixed(2)}"; // Convert m/s to km/h
+          speed =
+              "${(position.speed * 3.6).toStringAsFixed(2)}"; // Convert m/s to km/h
         } else {
-          speed = "0.0"; // Display as idle if speed is below the threshold
+          speed = "0.0";
+          setState(() {}); // Display as idle if speed is below the threshold
         }
 
         originLatlng = LatLng(position.latitude, position.longitude);
-
 
         // Calculate distance covered
         if (_previousPosition != null) {
@@ -399,17 +516,25 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
             position.longitude,
           );
           _totalDistance += distance; // Update total distance
+        }
+        _previousPosition = position;
 
-        }  _previousPosition = position;
-
-        double distanceToDestination = Geolocator.distanceBetween(originLatlng!.latitude, originLatlng!.longitude, widget.destinationLatlng.latitude, widget.destinationLatlng.longitude);
+        distanceToDestination = Geolocator.distanceBetween(
+            originLatlng!.latitude,
+            originLatlng!.longitude,
+            widget.destinationLatlng.latitude,
+            widget.destinationLatlng.longitude);
         // log(distanceToDestination.toString());
-        if(distanceToDestination<=25){
+
+        if (distanceToDestination <= 20) {
           log("won $distanceToDestination");
           raceZoneController.won.value = true;
           rank.add(userController.user.sId!);
-        }
-        else{
+          lobbyOperationController.addRank(
+              lobbyId: widget.lobbyId,
+              duration: raceZoneController.second.value);
+          stopTimer();
+        } else {
           log("not yet $distanceToDestination");
         }
 
@@ -417,61 +542,22 @@ class _RaceZoneScreenState extends State<RaceZoneScreen> {
 
         log(originLatlng!.longitude.toString());
 
-
         setState(() {});
       }
     });
-
   }
 
-
-  // getPolyline() async {
-  //   isLoading = true;
-  //   setState(() {});
-  //
-  //   try {
-  //
-  //
-  //     if (polylineCoordinates.isNotEmpty) {
-  //
-  //       polylines.add(Polyline(
-  //           polylineId: PolylineId("polyline"),
-  //           color: Colors.blue,
-  //           width: 7,
-  //           points: polylineCoordinates));
-  //
-  //       googleMapController
-  //           .animateCamera(CameraUpdate.newLatLngZoom(originLatlng!, 10));
-  //     } else {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Route not found. Please try again.')),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     // If there's an error in fetching the route, show an error message
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //           backgroundColor: Colors.red,
-  //           content: Text(
-  //               'Failed to fetch route. Please check your connection or end location and try again.')),
-  //     );
-  //   } finally {
-  //     isLoading = false;
-  //     setState(() {});
-  //   }
-  // }
-@override
+  @override
   void dispose() {
     // TODO: implement dispose
 
-  _positionSubscription!.cancel();
-  _messageTimer!.cancel();
+    _positionSubscription!.cancel();
+    _messageTimer!.cancel();
     super.dispose();
   }
 }
 
-class RaceZoneController extends GetxController{
+class RaceZoneController extends GetxController {
   var won = false.obs;
-
-
+  var second = 0.obs;
 }

@@ -19,7 +19,7 @@ class LobbyOperationController extends GetxController{
   Future<void> createLobby({ required double originLat, required double originLng,required double destinationLat,required double destinationLng  ,required   List<List<double>> polyline,required String distance}) async{
 
     try{
-     LobbyModel lobbyModel = await lobbyRepository.createLobby(userId: userController.userModel.value.sId??"error", originLat: originLat, originLng: originLng, destinationLat: destinationLat, destinationLng: destinationLng, polyline: polyline, distance: distance);
+     LobbyModel lobbyModel = await lobbyRepository.createLobby(name:userController.userModel.value.name!,userId: userController.userModel.value.sId??"error", originLat: originLat, originLng: originLng, destinationLat: destinationLat, destinationLng: destinationLng, polyline: polyline, distance: distance);
      lobbyModelController.setLobbyModel(lobbyModel);
      Get.to(LobbyScreen());
     }catch(e){
@@ -41,7 +41,7 @@ class LobbyOperationController extends GetxController{
   ///JOIN LOBBY
   Future<void> joinLobby({required lobbyId}) async{
     try{
-      LobbyModel lobbyModel = await lobbyRepository.joinLobby(lobbyId: lobbyId, userId: userController.userModel.value.sId);
+      LobbyModel lobbyModel = await lobbyRepository.joinLobby(name: userController.userModel.value.name,lobbyId: lobbyId, userId: userController.userModel.value.sId);
       lobbyModelController.setLobbyModel(lobbyModel);
     }catch(e){
       throw e.toString();
@@ -69,6 +69,15 @@ class LobbyOperationController extends GetxController{
   Future<void> removeReady({required lobbyId}) async{
     try{
       LobbyModel lobbyModel = await lobbyRepository.removeReady(lobbyId: lobbyId, userId: userController.userModel.value.sId);
+      lobbyModelController.setLobbyModel(lobbyModel);
+    }catch(e){
+      throw e.toString();
+    }
+  }
+  ///ADD RANK
+  Future<void> addRank({required lobbyId,required duration}) async{
+    try{
+      LobbyModel lobbyModel = await lobbyRepository.addRank(lobbyId: lobbyId, userId: userController.userModel.value.sId, duration: duration);
       lobbyModelController.setLobbyModel(lobbyModel);
     }catch(e){
       throw e.toString();
